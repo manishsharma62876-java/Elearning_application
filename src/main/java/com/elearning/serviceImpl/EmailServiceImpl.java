@@ -20,20 +20,58 @@ public class EmailServiceImpl implements EmailService {
             String studentName,
             String courseName) {
 
-        SimpleMailMessage message = new SimpleMailMessage();
+        try {
 
-        message.setTo(toEmail);
+            SimpleMailMessage message = new SimpleMailMessage();
 
-        message.setSubject("Course Enrollment Successful");
+            // Sender Email
+            message.setFrom("manishsharma62876@gmail.com");
 
-        message.setText(
-                "Hello " + studentName +
-                "\n\nYou have successfully enrolled in:\n\n"
-                + courseName
-                + "\n\nHappy Learning!"
-        );
+            // Receiver Email
+            message.setTo(toEmail);
 
-        mailSender.send(message);
+            // Subject
+            message.setSubject("🎉 Course Enrollment Successful");
+
+            // Email Body
+            message.setText(
+
+                    "Dear " + studentName + ",\n\n"
+
+                    + "Congratulations!\n\n"
+
+                    + "You have successfully enrolled in the following course:\n\n"
+
+                    + "Course Name : " + courseName + "\n\n"
+
+                    + "We wish you a successful learning journey.\n\n"
+
+                    + "Happy Learning!\n\n"
+
+                    + "Regards,\n"
+
+                    + "E-Learning Team"
+
+            );
+
+            mailSender.send(message);
+
+            System.out.println("====================================");
+            System.out.println("Email Sent Successfully");
+            System.out.println("To : " + toEmail);
+            System.out.println("Course : " + courseName);
+            System.out.println("====================================");
+
+        } catch (Exception e) {
+
+            System.out.println("====================================");
+            System.out.println("Email Sending Failed");
+            System.out.println(e.getMessage());
+            System.out.println("====================================");
+
+            e.printStackTrace();
+        }
+
     }
 
 }

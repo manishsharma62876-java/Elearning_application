@@ -10,5 +10,7 @@ public interface EnrollmentService {
 	EnrollmentResponse enrollCourse(EnrollmentRequest request, String email);
 
 	List<EnrollmentResponse> getMyCourses(String email);
+	
+	List<EnrollmentResponse> getAllEnrollments();
 
 }

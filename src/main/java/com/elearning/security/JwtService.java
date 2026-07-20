@@ -1,5 +1,6 @@
 package com.elearning.security;
 
+
 import java.util.Date;
 
 import org.springframework.stereotype.Service;
@@ -9,16 +10,24 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 
 
+
 @Service
 public class JwtService {
 
 
-    private String secretKey = 
+    private static final String SECRET_KEY =
             "mySuperSecretKeyForElearningApplicationJWTAuthentication123456";
 
 
 
+    private static final long JWT_EXPIRATION =
+            1000 * 60 * 60; // 1 hour
+
+
+
+
     // Generate JWT Token
+
     public String generateToken(String email) {
 
 
@@ -29,12 +38,15 @@ public class JwtService {
                 .setIssuedAt(new Date())
 
                 .setExpiration(
-                    new Date(System.currentTimeMillis() + 1000 * 60 * 60)
+                        new Date(
+                                System.currentTimeMillis()
+                                + JWT_EXPIRATION
+                        )
                 )
 
                 .signWith(
-                    SignatureAlgorithm.HS256,
-                    secretKey
+                        SignatureAlgorithm.HS256,
+                        SECRET_KEY
                 )
 
                 .compact();
@@ -44,21 +56,72 @@ public class JwtService {
 
 
 
-    // Extract Email from JWT Token
+
+    // Extract Email from Token
+
     public String extractUsername(String token) {
 
 
-        Claims claims = 
-                Jwts.parser()
+        return extractAllClaims(token)
+                .getSubject();
 
-                .setSigningKey(secretKey)
+    }
+
+
+
+
+
+    // Validate Token
+
+    public boolean isTokenValid(
+            String token,
+            String email
+    ) {
+
+
+        String username =
+                extractUsername(token);
+
+
+        return (
+                username.equals(email)
+                &&
+                !isTokenExpired(token)
+        );
+
+    }
+
+
+
+
+
+    // Check Expiration
+
+    private boolean isTokenExpired(String token) {
+
+
+        return extractAllClaims(token)
+                .getExpiration()
+                .before(new Date());
+
+    }
+
+
+
+
+
+    // Extract Claims
+
+    private Claims extractAllClaims(String token) {
+
+
+        return Jwts.parser()
+
+                .setSigningKey(SECRET_KEY)
 
                 .parseClaimsJws(token)
 
                 .getBody();
-
-
-        return claims.getSubject();
 
     }
 

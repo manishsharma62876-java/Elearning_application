@@ -14,6 +14,7 @@ import com.elearning.mapper.EnrollmentMapper;
 import com.elearning.repository.CourseRepository;
 import com.elearning.repository.EnrollmentRepository;
 import com.elearning.repository.UserRepository;
+import com.elearning.service.EmailService;
 import com.elearning.service.EnrollmentService;
 
 import lombok.RequiredArgsConstructor;
@@ -22,82 +23,143 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EnrollmentServiceImpl implements EnrollmentService {
 
-	private final EnrollmentRepository enrollmentRepository;
+    private final EnrollmentRepository enrollmentRepository;
 
-	private final CourseRepository courseRepository;
+    private final CourseRepository courseRepository;
 
-	private final UserRepository userRepository;
+    private final UserRepository userRepository;
 
-	private final EnrollmentMapper enrollmentMapper;
+    private final EnrollmentMapper enrollmentMapper;
 
-	@Override
-	public EnrollmentResponse enrollCourse(EnrollmentRequest request, String email) {
+    private final EmailService emailService;
 
-		// 1. Find Student using JWT email
+    @Override
+    public EnrollmentResponse enrollCourse(
+            EnrollmentRequest request,
+            String email) {
 
-		User student = userRepository.findByEmail(email)
+        // Find Student
 
-				.orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+        User student = userRepository.findByEmail(email)
 
-		// 2. Find Course
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Student not found"));
 
-		Course course = courseRepository.findById(request.getCourseId())
 
-				.orElseThrow(() -> new ResourceNotFoundException("Course not found"));
 
-		// 3. Check duplicate enrollment
+        // Find Course
 
-		boolean alreadyEnrolled = enrollmentRepository.existsByStudentIdAndCourseId(student.getId(), course.getId());
+        Course course = courseRepository.findById(request.getCourseId())
 
-		if (alreadyEnrolled) {
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Course not found"));
 
-			throw new RuntimeException("Already enrolled in this course");
 
-		}
 
-		// 4. Create Enrollment Object
+        // Check Duplicate Enrollment
 
-		Enrollment enrollment = new Enrollment();
+        boolean alreadyEnrolled =
+                enrollmentRepository.existsByStudentIdAndCourseId(
+                        student.getId(),
+                        course.getId()
+                );
 
-		enrollment.setStudent(student);
+        if (alreadyEnrolled) {
 
-		enrollment.setCourse(course);
+            throw new RuntimeException(
+                    "You are already enrolled in this course."
+            );
 
-		// status and date automatically handled by @PrePersist
+        }
 
-		// 5. Save database
 
-		Enrollment savedEnrollment = enrollmentRepository.save(enrollment);
 
-		// 6. Return Response DTO
+        // Create Enrollment
 
-		return enrollmentMapper.toResponse(savedEnrollment);
+        Enrollment enrollment = new Enrollment();
 
-	}
+        enrollment.setStudent(student);
 
-	@Override
-	public List<EnrollmentResponse> getMyCourses(String email) {
+        enrollment.setCourse(course);
 
-		// Find Student
 
-		User student = userRepository.findByEmail(email)
 
-				.orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+        // Save Enrollment
 
-		// Fetch Enrollment List
+        Enrollment savedEnrollment =
+                enrollmentRepository.save(enrollment);
 
-		List<Enrollment> enrollments = enrollmentRepository.findByStudent(student);
 
-		// Entity -> DTO
 
-		return enrollments
+        // Send Confirmation Email
 
-				.stream()
+        try {
 
-				.map(enrollmentMapper::toResponse)
+            emailService.sendEnrollmentEmail(
 
-				.toList();
+                    student.getEmail(),
 
-	}
+                    student.getName(),
+
+                    course.getTitle()
+
+            );
+
+            System.out.println(
+                    "Enrollment email sent successfully."
+            );
+
+        } catch (Exception e) {
+
+            System.out.println(
+                    "Email sending failed: " + e.getMessage()
+            );
+
+        }
+
+
+
+        // Return Response
+
+        return enrollmentMapper.toResponse(savedEnrollment);
+
+    }
+
+
+
+    @Override
+    public List<EnrollmentResponse> getMyCourses(
+            String email) {
+
+        User student = userRepository.findByEmail(email)
+
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Student not found"));
+
+
+
+        List<Enrollment> enrollments =
+                enrollmentRepository.findByStudent(student);
+
+
+
+        return enrollments
+
+                .stream()
+
+                .map(enrollmentMapper::toResponse)
+
+                .toList();
+
+    }
+    @Override
+    public List<EnrollmentResponse> getAllEnrollments(){
+
+        return enrollmentRepository.findAll()
+                .stream()
+                .map(enrollmentMapper::toResponse)
+                .toList();
+
+    }
 
 }

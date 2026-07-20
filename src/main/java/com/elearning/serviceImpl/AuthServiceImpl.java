@@ -18,45 +18,49 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-	private final UserRepository userRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
-	private final PasswordEncoder passwordEncoder;
+    @Override
+    public String signup(SignupRequest request) {
 
-	private final JwtService jwtservice;
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            return "Email already exists";
+        }
 
-	@Override
-	public String signup(SignupRequest request) {
-		if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-			return "Email already exist";
-		}
-		User user = new User();
+        User user = new User();
 
-		user.setName(request.getName());
-		user.setEmail(request.getEmail());
+        user.setName(request.getName());
+        user.setEmail(request.getEmail());
 
-		// Encrypt password
-		user.setPassword(passwordEncoder.encode(request.getPassword()));
+        // Encrypt password
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-		user.setRole(Role.valueOf(request.getRole()));
+        // Every new user is a STUDENT
+        user.setRole(Role.STUDENT);
 
-		userRepository.save(user);
+        userRepository.save(user);
 
-		return "User registered successfully......!!!!!!!!!!!";
-		
-	}
+        return "Student registered successfully.";
+    }
 
-	@Override
-	public LoginResponse login(LoginRequest request) {
+    @Override
+    public LoginResponse login(LoginRequest request) {
 
-		User user = userRepository.findByEmail(request.getEmail())
-				.orElseThrow(() -> new RuntimeException("User not found::"));
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-			throw new RuntimeException("Invalid password");
-		}
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid Password");
+        }
 
-		String token = jwtservice.generateToken(user.getEmail());
+        String token = jwtService.generateToken(user.getEmail());
 
-		return new LoginResponse(token, user.getRole().name());
-	}
+        return new LoginResponse(
+        	    token,
+        	    user.getRole().name(),
+        	    user.getName(),
+        	    user.getEmail());
+    }
 }
